@@ -314,3 +314,88 @@
     gap: 8px;
   }
 }
+
+/* Admin Issues Table */
+.admin-map-section {
+  margin-bottom: 2rem;
+}
+
+.admin-map-section h2 {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.admin-issues-section {
+  margin-top: 2rem;
+}
+
+.admin-issues-section h2 {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.issues-table {
+  background: var(--surface);
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: var(--shadow);
+}
+
+.issues-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.issues-table thead {
+  background: var(--primary-color);
+  color: white;
+}
+
+.issues-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.issues-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+}
+
+.issues-table tbody tr:hover {
+  background: var(--hover-bg);
+}
+
+.issues-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.priority-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.priority-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.priority-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.priority-high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.priority-critical {
+  background: #fecaca;
+  color: #7f1d1d;
+}

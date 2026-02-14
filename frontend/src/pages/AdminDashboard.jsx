@@ -1,29 +1,33 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { issuesAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import L from 'leaflet';
 import './AdminDashboard.css';
 
+// Fix marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 const AdminDashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [recentIssues, setRecentIssues] = useState([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
+    fetchIssues();
   }, []);
 
-  const fetchData = async () => {
+  const fetchIssues = async () => {
     try {
-      const [statsRes, issuesRes] = await Promise.all([
-        issuesAPI.getStats(),
-        issuesAPI.getAll({ limit: 5 }),
-      ]);
-
-      setStats(statsRes.data.data);
-      setRecentIssues(issuesRes.data.data);
+      const response = await issuesAPI.getAll();
+      setIssues(response.data.data);
     } catch (error) {
-      toast.error('Failed to fetch dashboard data');
+      toast.error('Failed to fetch issues');
     } finally {
       setLoading(false);
     }
@@ -40,6 +44,16 @@ const AdminDashboard = () => {
     return `badge ${classes[status] || ''}`;
   };
 
+  const updateStatus = async (issueId, newStatus) => {
+    try {
+      await issuesAPI.updateStatus(issueId, { status: newStatus });
+      toast.success('Status updated successfully');
+      fetchIssues();
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-center" style={{ minHeight: '60vh' }}>
@@ -54,156 +68,124 @@ const AdminDashboard = () => {
         <div className="admin-header">
           <div>
             <h1>🛡️ Admin Dashboard</h1>
-            <p>Manage and monitor all reported issues</p>
-          </div>
-          <div className="admin-actions">
-            <Link to="/admin/issues" className="btn btn-primary">
-              Manage Issues
-            </Link>
-            <Link to="/admin/map" className="btn btn-outline">
-              View Map
-            </Link>
+            <p>View all reported issues and their locations</p>
           </div>
         </div>
 
-        {stats && (
-          <>
-            <div className="admin-stats-grid">
-              <div className="admin-stat-card total">
-                <div className="stat-icon">📊</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.total}</div>
-                  <div className="stat-label">Total Issues</div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card pending">
-                <div className="stat-icon">⏳</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.byStatus.pending}</div>
-                  <div className="stat-label">Pending Review</div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card verified">
-                <div className="stat-icon">✓</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.byStatus.verified}</div>
-                  <div className="stat-label">Verified</div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card progress">
-                <div className="stat-icon">🔧</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.byStatus.inProgress}</div>
-                  <div className="stat-label">In Progress</div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card resolved">
-                <div className="stat-icon">✅</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.byStatus.resolved}</div>
-                  <div className="stat-label">Resolved</div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card rejected">
-                <div className="stat-icon">❌</div>
-                <div className="stat-info">
-                  <div className="stat-number">{stats.byStatus.rejected}</div>
-                  <div className="stat-label">Rejected</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="analytics-row">
-              <div className="analytics-card">
-                <h3>Issues by Category</h3>
-                <div className="category-list">
-                  {stats.byCategory.map((cat) => (
-                    <div key={cat._id} className="category-item">
-                      <span className="category-name">{cat._id}</span>
-                      <div className="category-bar-container">
-                        <div
-                          className="category-bar"
-                          style={{
-                            width: `${(cat.count / stats.total) * 100}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="category-count">{cat.count}</span>
+        {/* Map Section */}
+        <div className="admin-map-section">
+          <h2>📍 Issues Map</h2>
+          <div style={{ height: '400px', width: '100%', marginBottom: '2rem' }}>
+            <MapContainer
+              center={[20.5937, 78.9629]}
+              zoom={5}
+              style={{ height: '100%', width: '100%', borderRadius: '8px' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              {issues.map((issue) => (
+                <Marker
+                  key={issue._id}
+                  position={[
+                    issue.location.coordinates[1],
+                    issue.location.coordinates[0],
+                  ]}
+                >
+                  <Popup>
+                    <div style={{ minWidth: '200px' }}>
+                      <h4>{issue.title}</h4>
+                      <p>{issue.description}</p>
+                      <p><strong>Category:</strong> {issue.category}</p>
+                      <p><strong>Status:</strong> {issue.status}</p>
+                      <p><strong>Reported by:</strong> {issue.reportedBy?.name}</p>
+                      <Link to={`/issues/${issue._id}`} className="btn btn-sm btn-primary">
+                        View Details
+                      </Link>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="analytics-card">
-                <h3>Issues by Priority</h3>
-                <div className="priority-list">
-                  {stats.byPriority.map((pri) => (
-                    <div key={pri._id} className="priority-item">
-                      <span className={`priority-badge priority-${pri._id.toLowerCase()}`}>
-                        {pri._id}
-                      </span>
-                      <div className="priority-bar-container">
-                        <div
-                          className="priority-bar"
-                          style={{
-                            width: `${(pri.count / stats.total) * 100}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="priority-count">{pri.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className="recent-issues-section">
-          <div className="section-header">
-            <h2>Recent Reports</h2>
-            <Link to="/admin/issues" className="view-all-link">
-              View All →
-            </Link>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
+        </div>
 
-          <div className="issues-list">
-            {recentIssues.map((issue) => (
-              <div key={issue._id} className="issue-row card">
-                <div className="issue-thumbnail">
-                  <img
-                    src={`http://localhost:5000/uploads/${issue.image}`}
-                    alt={issue.title}
-                  />
-                </div>
-                <div className="issue-info">
-                  <h4>{issue.title}</h4>
-                  <p>{issue.description}</p>
-                  <div className="issue-details">
-                    <span className="badge">{issue.category}</span>
-                    <span>📍 {issue.address}</span>
-                    <span>👤 {issue.reportedBy?.name}</span>
-                    <span>📅 {new Date(issue.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <div className="issue-status-col">
-                  <span className={getStatusBadgeClass(issue.status)}>
-                    {issue.status}
-                  </span>
-                  <span className={`priority-${issue.priority.toLowerCase()}`}>
-                    {issue.priority} Priority
-                  </span>
-                  <Link to={`/issues/${issue._id}`} className="btn btn-outline btn-sm">
-                    Manage
-                  </Link>
-                </div>
-              </div>
-            ))}
+        {/* Issues List Section */}
+        <div className="admin-issues-section">
+          <h2>📋 All Reported Issues ({issues.length})</h2>
+          <div className="issues-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Reported By</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issues.map((issue) => (
+                  <tr key={issue._id}>
+                    <td>
+                      <img
+                        src={`http://localhost:5000/uploads/${issue.image}`}
+                        alt={issue.title}
+                        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    </td>
+                    <td>
+                      <strong>{issue.title}</strong>
+                      <br />
+                      <small>{issue.description}</small>
+                    </td>
+                    <td>
+                      <span className="badge">{issue.category}</span>
+                    </td>
+                    <td>{issue.address}</td>
+                    <td>
+                      <strong>{issue.reportedBy?.name}</strong>
+                      <br />
+                      <small>{issue.reportedBy?.email}</small>
+                      <br />
+                      <small>{issue.reportedBy?.phone}</small>
+                    </td>
+                    <td>
+                      <select
+                        value={issue.status}
+                        onChange={(e) => updateStatus(issue._id, e.target.value)}
+                        className={getStatusBadgeClass(issue.status)}
+                        style={{ padding: '4px 8px', borderRadius: '4px' }}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Verified">Verified</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </td>
+                    <td>
+                      <span className={`priority-badge priority-${issue.priority.toLowerCase()}`}>
+                        {issue.priority}
+                      </span>
+                    </td>
+                    <td>
+                      {new Date(issue.createdAt).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <Link to={`/issues/${issue._id}`} className="btn btn-sm btn-primary">
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

@@ -7,6 +7,11 @@ const fs = require('fs');
 // @access  Private
 exports.createIssue = async (req, res) => {
   try {
+    console.log('=== Create Issue Request ===');
+    console.log('Body:', req.body);
+    console.log('File:', req.file);
+    console.log('User:', req.user);
+    
     const { title, description, category, address, priority } = req.body;
     
     // Parse coordinates if it's a string
@@ -16,6 +21,7 @@ exports.createIssue = async (req, res) => {
         ? JSON.parse(req.body.coordinates) 
         : req.body.coordinates;
     } catch (error) {
+      console.error('Coordinate parse error:', error);
       return res.status(400).json({
         success: false,
         message: 'Invalid coordinates format'
@@ -46,7 +52,7 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    const issue = await Issue.create({
+    const issueData = {
       title,
       description,
       category,
@@ -58,13 +64,18 @@ exports.createIssue = async (req, res) => {
       priority: priority || 'Medium',
       image: req.file.filename,
       reportedBy: req.user._id
-    });
+    };
+    
+    console.log('Creating issue with data:', issueData);
+    const issue = await Issue.create(issueData);
+    console.log('Issue created successfully:', issue);
 
     res.status(201).json({
       success: true,
       data: issue
     });
   } catch (error) {
+    console.error('Issue creation error:', error);
     // Delete uploaded file if issue creation fails
     if (req.file) {
       const filePath = path.join(__dirname, '../../uploads', req.file.filename);

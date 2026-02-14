@@ -81,12 +81,11 @@ const issueSchema = new mongoose.Schema({
 issueSchema.index({ location: '2dsphere' });
 
 // Update the updatedAt field before saving
-issueSchema.pre('save', function(next) {
+issueSchema.pre('save', async function() {
   this.updatedAt = Date.now();
   if (this.status === 'Resolved' && !this.resolvedAt) {
     this.resolvedAt = Date.now();
   }
-  next();
 });
 
 module.exports = mongoose.model('Issue', issueSchema);

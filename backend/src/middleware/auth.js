@@ -23,7 +23,7 @@ exports.protect = async (req, res, next) => {
         });
       }
 
-      next();
+      return next();
     } catch (error) {
       console.error(error);
       return res.status(401).json({
@@ -31,9 +31,7 @@ exports.protect = async (req, res, next) => {
         message: 'Not authorized, token failed'
       });
     }
-  }
-
-  if (!token) {
+  } else {
     return res.status(401).json({
       success: false,
       message: 'Not authorized, no token'
@@ -44,9 +42,9 @@ exports.protect = async (req, res, next) => {
 // Admin middleware
 exports.admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
-    next();
+    return next();
   } else {
-    res.status(403).json({
+    return res.status(403).json({
       success: false,
       message: 'Not authorized as admin'
     });
