@@ -20,14 +20,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       try {
         const response = await authAPI.getMe();
         setUser(response.data.data);
       } catch (error) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
       }
     }
     setLoading(false);
@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const response = await authAPI.login(credentials);
     const { token, ...userData } = response.data.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     return response.data;
   };
@@ -45,15 +45,15 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     const response = await authAPI.register(userData);
     const { token, ...user } = response.data.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(user));
     setUser(user);
     return response.data;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setUser(null);
   };
 
